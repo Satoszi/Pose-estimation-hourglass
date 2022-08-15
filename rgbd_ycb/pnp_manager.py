@@ -24,14 +24,12 @@ def get_blob_center(heatmap):
 
 
 def get_all_blobs_centers(mask):
-    
     blobs_centers = []
     for idx in range(mask.shape[-1]):
         heatmap = mask[:,:,idx]
         blob_center = get_blob_center(heatmap)
         blobs_centers.append(blob_center)
-        
-    return blobs_centers
+    return np.array(blobs_centers)
 
 class FramesGeneratorManager():
     def __init__(self, dir_path, video_number, target_resolution, skip_frames):
