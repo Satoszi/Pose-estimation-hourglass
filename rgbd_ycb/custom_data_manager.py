@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 
 import os
-import tqdm
+import tensorflow as tf
 from scipy.spatial.transform import Rotation
 
 class AugmentationManager():
@@ -212,10 +212,71 @@ class CustomDataLoader():
 
 
 
+class DataGenerator(tf.keras.utils.Sequence):        
+    def __init__(self, batch_size, gen, size):
+        self.batch_size = batch_size
+        self.on_epoch_end()
+        self.gen = gen
+        self.size = size
+    def __len__(self):
+        return int(self.size/self.batch_size)
+
+    def __getitem__(self, index):
+        #index = self.index[index * self.batch_size:(index + 1) * self.batch_size]
+        #batch = [self.indices[k] for k in index]
+        
+        x_train = []
+        y_train = []
+        for i in range(self.batch_size):
+            x, y = next(self.gen)
+            x_train.append(x)
+            y_train.append(y)
+            
+        x_train = np.array(x_train)
+        y_train = np.array(y_train)
+        
+        return x_train, y_train
+
+    def on_epoch_end(self):
+        pass
 
 
+class DataGeneratorBuilder():
+    def __init__(self, 
+                data_loader, 
+                frames_poses_dict,
+                dir_types_go_gen,
+                batch_size = 16 ,
+                frames_to_skip = 0, 
+                aug = False):
+        
+        self.frames_poses_dict = frames_poses_dict
+        self.dir_types_go_gen = dir_types_go_gen
+        self.dataset_size = self.get_dataset_size()
+        self.generator = self.power_driver_generator(data_loader, frames_poses_dict, dir_types_go_gen, frames_to_skip, aug)
+        self.batch_size = batch_size
+
+    def get_dataset_size(self):
+        dataset_size = 0
+        for dir_type in self.dir_types_go_gen:
+            dataset_size += len(self.frames_poses_dict[dir_type]['color_frames'])
+        return dataset_size
+
+    def power_driver_generator(self, data_loader, frames_poses_dict, dir_types_go_gen, frames_to_skip = 0, aug = False):
+        while True:
+            dir_type = random.choice(dir_types_go_gen)
+            frames_number = len(frames_poses_dict[dir_type]['color_frames'])
+            frame_number = int(random.random()*frames_number)
+            color_frame, mask, depth = data_loader.get_power_driver_trio(frames_poses_dict, dir_type, frame_number, aug = aug)
+            yield color_frame, mask
+
+    def build_tf_generator(self):
+        tf_generator = DataGenerator(batch_size=self.batch_size, gen=self.generator, size = self.dataset_size)
+        return tf_generator
 
 
+    
+    
 
 
 
