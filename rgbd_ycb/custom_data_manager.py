@@ -21,14 +21,14 @@ class AugmentationManager():
         for operation in self.aug_pipeline:
             aug_type = operation["aug_type"]
             parameters = operation["parameters"]
-            if aug_type == "channel_shift":
+            if aug_type == "channel_shift" and random.random() < 0.7:
                 img = self.channel_shift(img)
-            if aug_type == "rotation":
+            if aug_type == "rotation" and random.random() < 0.7:
                 img, mask, depth = self.rotation(img, mask, parameters[0], depth)
             if aug_type == "flip": 
                 img, mask, depth = self.flip(img, mask, depth)
                 pass
-            if aug_type == "random_rectangles": 
+            if aug_type == "random_rectangles" and random.random() < 0.5: 
                 img = self.random_rectangles(img, 
                                             parameters[0], 
                                             parameters[1], 
@@ -69,24 +69,53 @@ class AugmentationManager():
 
     def random_rectangles(self, img, number, size_perc, whole = True):
         size = img.shape[0]
-        for i in range(number):
-            x1 = int(random.random()*(size-5))
-            x2 = int(random.random()*(size*size_perc))
-            y1 = int(random.random()*(size-5))
-            y2 = int(random.random()*(size*size_perc))
 
-            if whole and random.random() < 0.5:
-                r = random.random()
-                g = random.random()
-                b = random.random()
-                if random.random() < 0.7:
-                    img[y1:y2+y1,x1:x2+x1] = [r,g,b]
-                else:
-                    fill = int(random.random()*3)*1-1
-                    img = np.array(img) # fix for flip() breaks the type
-                    img = cv2.circle(img,(x1,y1),int(size_perc * size/2),(r,g,b), fill)
-            if not whole and random.random() < 0.5:
-                img[y1:y2+y1,x1:x2+x1] *= random.random()+0.5 + random.random()-0.3
+        if random.random() < 0.5:
+            for i in range(number):
+                
+                x2 = int(random.random()*(size*size_perc))
+                x1 = int(random.random()*(size-1-x2))
+                y2 = int(random.random()*(size*size_perc))
+                y1 = int(random.random()*(size-1-y2))
+
+                if random.random() < 0.15 and size_perc > 0.4 and size_perc < 0.51:
+                    x3 = int(random.random()*(size-1-x2))
+                    y3 = int(random.random()*(size-1-y2))
+                    img[y3:y3+y2,x3:x3+x2] = img[y1:y1+y2,x1:x1+x2]
+
+                if random.random() < 0.3 and size_perc > 0.25 and size_perc < 0.4:
+                    x3 = int(random.random()*(size-1-x2))
+                    y3 = int(random.random()*(size-1-y2))
+                    img[y3:y3+y2,x3:x3+x2] = img[y1:y1+y2,x1:x1+x2]
+
+                if random.random() < 0.6 and size_perc < 0.25:
+                    x3 = int(random.random()*(size-1-x2))
+                    y3 = int(random.random()*(size-1-y2))
+                    img[y3:y3+y2,x3:x3+x2] = img[y1:y1+y2,x1:x1+x2]
+
+        if random.random() < 0.25:
+            for i in range(number):
+                
+                x2 = int(random.random()*(size*size_perc))
+                x1 = int(random.random()*(size-1-x2))
+                y2 = int(random.random()*(size*size_perc))
+                y1 = int(random.random()*(size-1-y2))
+
+                if whole and random.random() < 0.5:
+                    r = random.random()
+                    g = random.random()
+                    b = random.random()
+                    if random.random() < 0.7:
+                        img[y1:y2+y1,x1:x2+x1] = [r,g,b]
+                    else:
+                        fill = int(random.random()*3)*1-1
+                        img = np.array(img) # fix for flip() breaks the type
+                        img = cv2.circle(img,(x1,y1),int(size_perc * size/2),(r,g,b), fill)
+                if not whole and random.random() < 0.5:
+                    img[y1:y2+y1,x1:x2+x1] *= random.random()+0.5 + random.random()-0.3
+
+
+
         return img
 
 
@@ -120,18 +149,20 @@ class CustomDataCollector():
                 self.frames_poses_dict[dir_type]['poses'] = []
                 for file_name in (os.listdir(dir_1)):
                     if "color" in file_name:
-                        frame_path = os.path.join(dir_1,file_name)
-                        frame = cv2.imread(frame_path)
-                        frame = cv2.resize(frame,(self.IMG_SIZE,self.IMG_SIZE))/255.
-                        self.frames_poses_dict[dir_type]['color_frames'].append(frame)
-                        self.frames_poses_dict[dir_type]['poses'].append(self.poses[idx])
-                        self.frames_poses_dict[dir_type]['frames_idx'].append(idx)
+                        if idx % 10 == 0:
+                            frame_path = os.path.join(dir_1,file_name)
+                            frame = cv2.imread(frame_path)
+                            frame = cv2.resize(frame,(self.IMG_SIZE,self.IMG_SIZE))/255.
+                            self.frames_poses_dict[dir_type]['color_frames'].append(frame)
+                            self.frames_poses_dict[dir_type]['poses'].append(self.poses[idx])
+                            self.frames_poses_dict[dir_type]['frames_idx'].append(idx)
                         idx += 1
                     if "depth" in file_name:
-                        frame_path = os.path.join(dir_1,file_name)
-                        frame = cv2.imread(frame_path)
-                        frame = cv2.resize(frame,(self.IMG_SIZE,self.IMG_SIZE))/255.
-                        self.frames_poses_dict[dir_type]['depth_frames'].append(frame)
+                        if idx % 10 == 0:
+                            frame_path = os.path.join(dir_1,file_name)
+                            frame = cv2.imread(frame_path)
+                            frame = cv2.resize(frame,(self.IMG_SIZE,self.IMG_SIZE))/255.
+                            self.frames_poses_dict[dir_type]['depth_frames'].append(frame)
             else:
                 for file_name in os.listdir(dir_1):
                     if "color" in file_name:
@@ -205,7 +236,10 @@ class CustomDataLoader():
         points = self.get_x_y(verts, frames_poses_dict[dir_type]['poses'][idx],frames_poses_dict[dir_type]['frames_idx'][idx])
         mask = self.get_mask(points, original_frame_shape = [480,640])
         color_frame = frames_poses_dict[dir_type]['color_frames'][idx].copy()
-        depth_frame = frames_poses_dict[dir_type]['depth_frames'][idx].copy()
+        try:
+            depth_frame = frames_poses_dict[dir_type]['depth_frames'][idx].copy()
+        except:
+            depth_frame = frames_poses_dict[dir_type]['depth_frames'][idx-1].copy()
         if aug:
             color_frame, mask, depth_frame = self.augmentator.augment(color_frame, mask, depth_frame)
         return color_frame, mask, depth_frame
@@ -246,7 +280,7 @@ class DataGeneratorBuilder():
                 data_loader, 
                 frames_poses_dict,
                 dir_types_go_gen,
-                batch_size = 16 ,
+                batch_size = 32 ,
                 frames_to_skip = 0, 
                 aug = False):
         
@@ -260,7 +294,7 @@ class DataGeneratorBuilder():
         dataset_size = 0
         for dir_type in self.dir_types_go_gen:
             dataset_size += len(self.frames_poses_dict[dir_type]['color_frames'])
-        return dataset_size
+        return dataset_size*3
 
     def power_driver_generator(self, data_loader, frames_poses_dict, dir_types_go_gen, frames_to_skip = 0, aug = False):
         while True:
@@ -268,7 +302,8 @@ class DataGeneratorBuilder():
             frames_number = len(frames_poses_dict[dir_type]['color_frames'])
             frame_number = int(random.random()*frames_number)
             color_frame, mask, depth = data_loader.get_power_driver_trio(frames_poses_dict, dir_type, frame_number, aug = aug)
-            yield color_frame, mask
+            color_depth_frame = np.concatenate((color_frame, depth), axis = 2)
+            yield color_depth_frame, mask
 
     def build_tf_generator(self):
         tf_generator = DataGenerator(batch_size=self.batch_size, gen=self.generator, size = self.dataset_size)
